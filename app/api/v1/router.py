@@ -4,13 +4,14 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 # Endpoints (los crearás luego; estos imports deben existir cuando los añadas)
-# from app.api.v1.endpoints.health import router as health_router
+from app.api.v1.endpoints.health import router as health_router
 # from app.api.v1.endpoints.auth import router as auth_router
 # from app.api.v1.endpoints.training_sessions import router as training_router
 # from app.api.v1.endpoints.body_metrics import router as body_metrics_router
 # from app.api.v1.endpoints.metrics import router as metrics_router
 
 api_v1_router = APIRouter()
+api_v1_router.include_router(health_router, tags=["health"])
 
 # Cuando crees los routers, descomenta:
 # api_v1_router.include_router(health_router, tags=["health"])

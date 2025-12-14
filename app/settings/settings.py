@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     APP_NAME: str = "sports-tracker"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = True
+    DATABASE_URL: str
+    REDIS_URL: str = "redis://localhost:6379/0"
 
     # Ejemplo en .env:
     # CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
