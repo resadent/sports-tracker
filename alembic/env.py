@@ -9,7 +9,8 @@ from alembic import context
 
 # --- añade el proyecto al PYTHONPATH ---
 BASE_DIR = Path(__file__).resolve().parents[1]
-sys.path.append(str(BASE_DIR))
+SRC_DIR = BASE_DIR / "src"
+sys.path.append(str(SRC_DIR))
 
 # --- Alembic config ---
 config = context.config
@@ -18,9 +19,9 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # --- importa metadata ---
-from src.sports_tracker.db.base import Base
-from src.sports_tracker.settings import settings
-from src.sports_tracker.db.models import init  # noqa: F401  (importa User)
+from sports_tracker.db.base import Base
+from sports_tracker.settings import settings
+from sports_tracker.db.models import init  # noqa: F401  (importa User)
 
 target_metadata = Base.metadata
 

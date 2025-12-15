@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from celery import Celery
 
-from src.sports_tracker.settings import settings
+from sports_tracker.settings import settings
 
 celery_app = Celery(
     "training_metrics",

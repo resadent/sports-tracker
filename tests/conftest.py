@@ -6,9 +6,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.sports_tracker.main import create_app
-from src.sports_tracker.db.base import Base
-import src.sports_tracker.db.session as db_session_module
+from sports_tracker.main import create_app
+from sports_tracker.db.base import Base
+import sports_tracker.db.session as db_session_module
 
 
 @pytest.fixture(scope="session")
