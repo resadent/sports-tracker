@@ -18,9 +18,9 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # --- importa metadata ---
-from app.db.base import Base
-from app.settings import settings
-from app.db.models import init  # noqa: F401  (importa User)
+from src.sports_tracker.db.base import Base
+from src.sports_tracker.settings import settings
+from src.sports_tracker.db.models import init  # noqa: F401  (importa User)
 
 target_metadata = Base.metadata
 

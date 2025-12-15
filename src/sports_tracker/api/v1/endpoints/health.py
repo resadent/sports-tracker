@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 import redis
 
-from app.db.session import get_db
-from app.health.checks import check_db, check_redis
-from app.settings import settings
+from sports_tracker.db.session import get_db
+from sports_tracker.health.checks import check_db, check_redis
+from sports_tracker.settings import settings
 
 router = APIRouter()
 

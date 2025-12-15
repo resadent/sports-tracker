@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from celery import Celery
 
-from app.settings import settings
+from src.sports_tracker.settings import settings
 
 celery_app = Celery(
     "training_metrics",
-    broker=settings.CELERY_BROKER_URL,
-    backend=settings.CELERY_RESULT_BACKEND,
+    broker=settings.settings.CELERY_BROKER_URL,
+    backend=settings.settings.CELERY_RESULT_BACKEND,
 )
 
 # Config razonable

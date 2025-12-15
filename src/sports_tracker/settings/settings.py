@@ -6,6 +6,9 @@ from typing import Any
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from dotenv import load_dotenv
+load_dotenv()
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
@@ -13,7 +16,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "sports-tracker"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = True
-    DATABASE_URL: str
+    DATABASE_URL: str = ""
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Ejemplo en .env:

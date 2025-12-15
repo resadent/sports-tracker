@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.db.models.user import User
+from sports_tracker.db.models.user import User
 
 
 class UserRepository:

@@ -4,8 +4,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.router import api_v1_router
-from app.settings import settings
+from sports_tracker.api.v1.router import api_v1_router
+from sports_tracker.settings import settings
 
 
 def create_app() -> FastAPI:
