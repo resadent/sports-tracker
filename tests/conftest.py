@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 
 from src.sports_tracker.main import create_app
@@ -39,17 +39,26 @@ def db_session(engine) -> Session:
     """
     connection = engine.connect()
     transaction = connection.begin()
+    
+    # Creamos una sesión vinculada a la conexión
+    db = Session(bind=connection)
 
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=connection)
-    db = TestingSessionLocal()
+    # Iniciamos una transacción anidada (SAVEPOINT)
+    nested = connection.begin_nested()
+
+    # Si la app llama a db.commit(), SQLAlchemy reiniciará el savepoint automáticamente
+    @event.listens_for(db, "after_transaction_end")
+    def end_savepoint(session, transaction):
+        nonlocal nested
+        if not nested.is_active:
+            nested = connection.begin_nested()
 
     try:
         yield db
     finally:
         db.close()
-        transaction.rollback()
+        transaction.rollback()  # Esto revierte TODO lo que pasó en la conexión
         connection.close()
-
 
 @pytest.fixture()
 def client(db_session):
