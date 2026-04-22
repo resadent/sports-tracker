@@ -1,7 +1,6 @@
 # tests/api/test_users.py
 from __future__ import annotations
 
-
 def test_create_user_ok(client):
     r = client.post("/api/v1/users", json={"email": "test@example.com"})
     assert r.status_code == 201, r.text

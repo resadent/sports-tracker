@@ -3,17 +3,18 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 
 from src.sports_tracker.main import create_app
 from src.sports_tracker.db.base import Base
-import src.sports_tracker.db.session as db_session_module
-
+# import src.sports_tracker.db.session as db_session_module
+import sports_tracker.db.session as db_session_module
 
 @pytest.fixture(scope="session")
 def engine():
-    # OJO: sqlite in-memory se reinicia por conexión, por eso usamos pool StaticPool
+    # SQLite in-memory persistente durante la sesión de tests
+    # (misma conexión gracias a StaticPool)
     from sqlalchemy.pool import StaticPool
 
     engine_ = create_engine(
@@ -34,20 +35,32 @@ def create_schema(engine):
 @pytest.fixture()
 def db_session(engine) -> Session:
     """
-    Transacción por test: empieza, corre, y rollback al final.
-    Aísla completamente los tests entre sí.
+    Aislamiento robusto:
+    - Transacción externa por test (rollback al final)
+    - SAVEPOINT (begin_nested) para que los commit() del código no persistan
     """
     connection = engine.connect()
-    transaction = connection.begin()
+    outer_tx = connection.begin()
 
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=connection)
-    db = TestingSessionLocal()
+    TestingSessionLocal = sessionmaker(bind=connection, autoflush=False, autocommit=False)
+    db: Session = TestingSessionLocal()
+
+    # SAVEPOINT inicial
+    db.begin_nested()
+
+    # Si el código hace commit(), SQLAlchemy cierra el SAVEPOINT.
+    # Este listener lo reabre para que el test siga pudiendo commitear sin “persistir”.
+    @event.listens_for(db, "after_transaction_end")
+    def _restart_savepoint(session, transaction):
+        # Cuando termina el nested transaction, lo recreamos
+        if transaction.nested and not transaction._parent.nested:
+            session.begin_nested()
 
     try:
         yield db
     finally:
         db.close()
-        transaction.rollback()
+        outer_tx.rollback()
         connection.close()
 
 
@@ -56,10 +69,7 @@ def client(db_session):
     app = create_app()
 
     def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
+        yield db_session
 
     app.dependency_overrides[db_session_module.get_db] = override_get_db
 
