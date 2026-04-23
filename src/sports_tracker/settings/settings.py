@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "sports-tracker"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = True
-    DATABASE_URL: str = ""
+    DATABASE_URL: str = "postgresql://postgres:postgres@127.0.0.1:5432/training"
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Ejemplo en .env:
