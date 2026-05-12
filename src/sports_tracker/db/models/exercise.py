@@ -7,15 +7,17 @@ from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sports_tracker.db.base import Base
+from sports_tracker.db.models.muscle import Muscle
 from sports_tracker.db.models.session import Session
+from sports_tracker.db.models.workout_set import WorkoutSet
 
 
-class User(Base):
-    __tablename__ = "users"
+class Exercise(Base):
+    __tablename__ = "exercises"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(320), nullable=False, unique=True, index=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -23,6 +25,6 @@ class User(Base):
         server_default=func.now(),
     )
 
-    sessions: Mapped[list["Session"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+    workout_sets: Mapped[list["WorkoutSet"]] = relationship(
+        back_populates="exercise", cascade="all, delete-orphan"
     )
