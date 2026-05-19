@@ -28,3 +28,7 @@ class Exercise(Base):
     workout_sets: Mapped[list["WorkoutSet"]] = relationship(
         back_populates="exercise", cascade="all, delete-orphan"
     )
+
+    muscles: Mapped[list["Muscle"]] = relationship(
+        secondary="exercise_muscle", back_populates="exercises"
+    )
