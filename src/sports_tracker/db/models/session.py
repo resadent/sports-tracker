@@ -11,6 +11,7 @@ from sports_tracker.db.base import Base
 
 if TYPE_CHECKING:
     from sports_tracker.db.models.workout_set import WorkoutSet
+    from sports_tracker.db.models.user import User
 
 class Session(Base):
     __tablename__ = "sessions"
@@ -22,6 +23,8 @@ class Session(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(),
     )
+
+    user: Mapped["User"] = relationship(back_populates="sessions")
 
     workout_sets: Mapped[list["WorkoutSet"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"

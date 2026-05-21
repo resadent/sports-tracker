@@ -9,8 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sports_tracker.db.base import Base
 
-if TYPE_CHECKING:
-    from sports_tracker.db.models.session import Session
+from sports_tracker.db.models.session import Session
 
 
 class User(Base):
