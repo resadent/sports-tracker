@@ -7,6 +7,8 @@ from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, fun
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sports_tracker.db.base import Base
+from sports_tracker.db.models.user import User
+from sports_tracker.db.models.workout_set import WorkoutSet
 
 class Session(Base):
     __tablename__ = "sessions"

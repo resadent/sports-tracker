@@ -7,6 +7,7 @@ from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sports_tracker.db.base import Base
+from sports_tracker.db.models.exercise import Exercise
 
 
 class Muscle(Base):
