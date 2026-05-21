@@ -8,7 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sports_tracker.db.base import Base
 from sports_tracker.db.models.muscle import Muscle
-from sports_tracker.db.models.session import Session
 from sports_tracker.db.models.workout_set import WorkoutSet
 
 
