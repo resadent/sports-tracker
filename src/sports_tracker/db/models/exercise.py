@@ -9,9 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sports_tracker.db.base import Base
 
-if TYPE_CHECKING:
-    from sports_tracker.db.models.muscle import Muscle
-    from sports_tracker.db.models.workout_set import WorkoutSet
+from sports_tracker.db.models.workout_set import WorkoutSet
 
 
 class Exercise(Base):
@@ -31,6 +29,3 @@ class Exercise(Base):
         back_populates="exercise", cascade="all, delete-orphan"
     )
 
-    muscles: Mapped[list["Muscle"]] = relationship(
-        secondary="exercise_muscle", back_populates="exercises"
-    )

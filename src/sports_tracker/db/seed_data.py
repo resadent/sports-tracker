@@ -12,6 +12,8 @@ def seed_database():
     with SessionLocal() as db:
         # 1. Create the Muscle instance
         quadriceps = Muscle(name="Quadriceps")
+
+        # first add the muscle, then the exercise, then the muscles it trains
         
         # 2. Create the Exercise instance and assign the muscle
         quad_extension = Exercise(

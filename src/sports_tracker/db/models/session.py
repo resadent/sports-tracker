@@ -10,7 +10,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sports_tracker.db.base import Base
 
 if TYPE_CHECKING:
-    from sports_tracker.db.models.user import User
     from sports_tracker.db.models.workout_set import WorkoutSet
 
 class Session(Base):
@@ -24,7 +23,6 @@ class Session(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(),
     )
 
-    user: Mapped["User"] = relationship(back_populates="sessions")
     workout_sets: Mapped[list["WorkoutSet"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
