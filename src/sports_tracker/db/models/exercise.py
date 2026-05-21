@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sports_tracker.db.base import Base
-from sports_tracker.db.models.muscle import Muscle
-from sports_tracker.db.models.workout_set import WorkoutSet
+
+if TYPE_CHECKING:
+    from sports_tracker.db.models.muscle import Muscle
+    from sports_tracker.db.models.workout_set import WorkoutSet
 
 
 class Exercise(Base):
