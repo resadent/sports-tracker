@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     APP_NAME: str = "sports-tracker"
     APP_VERSION: str = "0.1.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
     DATABASE_URL: str = "postgresql://postgres:postgres@127.0.0.1:5432/training"
     REDIS_URL: str = "redis://localhost:6379/0"
 
@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     # Celery / Redis (Celery espera strings tipo URL)
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+
+    # Auth (JWT)
+    SECRET_KEY: str = "dev-only-secret-change-me-in-production-via-env-file"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
     @field_validator("CELERY_BROKER_URL", "CELERY_RESULT_BACKEND")
     @classmethod

@@ -7,8 +7,8 @@ from sports_tracker.settings import settings
 
 celery_app = Celery(
     "training_metrics",
-    broker=settings.settings.CELERY_BROKER_URL,
-    backend=settings.settings.CELERY_RESULT_BACKEND,
+    broker=settings.CELERY_BROKER_URL,
+    backend=settings.CELERY_RESULT_BACKEND,
 )
 
 # Config razonable
@@ -22,4 +22,4 @@ celery_app.conf.update(
 )
 
 # Autodiscover de tasks (módulos dentro de app/tasks/)
-celery_app.autodiscover_tasks(["app.tasks"])
+celery_app.autodiscover_tasks(["sports_tracker.tasks"])

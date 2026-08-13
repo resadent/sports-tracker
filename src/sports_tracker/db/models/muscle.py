@@ -29,5 +29,5 @@ class Muscle(Base):
     )
 
     exercises: Mapped[list["Exercise"]] = relationship(
-        secondary="exercise_muscle"
+        secondary="exercise_muscle", back_populates="muscles"
     )

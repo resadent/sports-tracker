@@ -10,8 +10,8 @@ class UserRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create(self, email: str) -> User:
-        user = User(email=email)
+    def create(self, email: str, hashed_password: str) -> User:
+        user = User(email=email, hashed_password=hashed_password)
         self.db.add(user)
         self.db.commit()
         self.db.refresh(user)

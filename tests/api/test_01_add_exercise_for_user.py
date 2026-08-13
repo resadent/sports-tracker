@@ -9,13 +9,14 @@ from sports_tracker.db.models.workout_set import WorkoutSet
 
 def test_add_session_with_quad_extension(db_session):
     # 1. Create a User
-    user = User(email="lifter@example.com")
+    user = User(email="lifter@example.com", hashed_password="not-a-real-hash")
     
     # 2. Create a Session assigned to the User
     session = Session(name="Leg Day", user=user)
     
     # 3. Create the Muscle and Exercise
-    quad_ext = Exercise(name="Quadriceps Extension")
+    quadriceps = Muscle(name="Quadriceps")
+    quad_ext = Exercise(name="Quadriceps Extension", muscles=[quadriceps])
     
     # 4. Link the Session and Exercise using a WorkoutSet
     workout_set = WorkoutSet(session=session, exercise=quad_ext, reps=12, weight=60.0)
@@ -34,5 +35,5 @@ def test_add_session_with_quad_extension(db_session):
     
     queried_exercise = queried_session.workout_sets[0].exercise
     assert queried_exercise.name == "Quadriceps Extension"
-    # assert len(queried_exercise.muscles) == 1
-    # assert queried_exercise.muscles[0].name == "Quadriceps"
+    assert len(queried_exercise.muscles) == 1
+    assert queried_exercise.muscles[0].name == "Quadriceps"

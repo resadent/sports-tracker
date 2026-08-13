@@ -31,3 +31,7 @@ class WorkoutSet(Base):
 
     session: Mapped["Session"] = relationship(back_populates="workout_sets")
     exercise: Mapped["Exercise"] = relationship(back_populates="workout_sets")
+
+    @property
+    def exercise_name(self) -> str | None:
+        return self.exercise.name if self.exercise else None

@@ -21,13 +21,13 @@ if config.config_file_name is not None:
 # --- importa metadata ---
 from sports_tracker.db.base import Base
 from sports_tracker.settings import settings
-from sports_tracker.db.models import init  # noqa: F401  (importa User)
+import sports_tracker.db.models  # noqa: F401  (importa todos los modelos)
 
 target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    return settings.settings.DATABASE_URL
+    return settings.DATABASE_URL
 
 
 def run_migrations_offline() -> None:

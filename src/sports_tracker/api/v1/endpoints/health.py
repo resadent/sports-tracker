@@ -14,7 +14,7 @@ router = APIRouter()
 
 def get_redis() -> redis.Redis:
     # Redis client "simple": si falla ping, lo capturamos en el check.
-    return redis.Redis.from_url(settings.settings.REDIS_URL, decode_responses=True)
+    return redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
 
 
 @router.get("/health")

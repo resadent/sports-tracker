@@ -19,6 +19,8 @@ class User(Base):
 
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True, index=True)
 
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

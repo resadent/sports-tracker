@@ -10,16 +10,16 @@ from sports_tracker.settings import settings
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title=settings.settings.APP_NAME, # todo have a look at this pls
-        version=settings.settings.APP_VERSION,
-        debug=settings.settings.DEBUG,
+        title=settings.APP_NAME,
+        version=settings.APP_VERSION,
+        debug=settings.DEBUG,
     )
 
     # CORS (si no lo necesitas, quítalo; pero en dev suele venir bien)
-    if settings.settings.CORS_ORIGINS:
+    if settings.CORS_ORIGINS:
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=settings.settings.CORS_ORIGINS,
+            allow_origins=settings.CORS_ORIGINS,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
@@ -29,7 +29,7 @@ def create_app() -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     def root() -> dict[str, str]:
-        return {"status": "ok", "app": settings.settings.APP_NAME, "version": settings.settings.APP_VERSION}
+        return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
 
     return app
 

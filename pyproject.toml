@@ -15,6 +15,10 @@ dependencies = [
   "redis",
   "celery",
   "psycopg[binary]",
+  "pyjwt",
+  "bcrypt",
+  "email-validator",
+  "python-multipart",
 ]
 
 [project.optional-dependencies]

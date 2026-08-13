@@ -12,6 +12,10 @@ from sports_tracker.db.base import Base
 from sports_tracker.db.models.workout_set import WorkoutSet
 
 
+if TYPE_CHECKING:
+    from sports_tracker.db.models.muscle import Muscle
+
+
 class Exercise(Base):
     __tablename__ = "exercises"
 
@@ -27,5 +31,9 @@ class Exercise(Base):
 
     workout_sets: Mapped[list["WorkoutSet"]] = relationship(
         back_populates="exercise", cascade="all, delete-orphan"
+    )
+
+    muscles: Mapped[list["Muscle"]] = relationship(
+        secondary="exercise_muscle", back_populates="exercises"
     )
 
