@@ -20,6 +20,7 @@ class WorkoutSetCreate(BaseModel):
     weight: float = Field(default=0.0, ge=0)
     position: int | None = Field(default=None, ge=0)
     set_type: SetType = SetType.NORMAL
+    superset_group: str | None = Field(default=None, max_length=36)
 
 
 class WorkoutSetUpdate(BaseModel):
@@ -27,6 +28,7 @@ class WorkoutSetUpdate(BaseModel):
     weight: float | None = Field(default=None, ge=0)
     position: int | None = Field(default=None, ge=0)
     set_type: SetType | None = None
+    superset_group: str | None = Field(default=None, max_length=36)
 
 
 class WorkoutSetRead(BaseModel):
@@ -38,6 +40,7 @@ class WorkoutSetRead(BaseModel):
     weight: float
     position: int
     set_type: SetType
+    superset_group: str | None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

@@ -62,7 +62,10 @@ class SessionRepository:
 
     def update_set(self, workout_set: WorkoutSet, **changes) -> WorkoutSet:
         for field, value in changes.items():
-            if value is not None:
+            if field == "superset_group":
+                # An explicit null clears the group; other fields skip None.
+                workout_set.superset_group = value
+            elif value is not None:
                 setattr(workout_set, field, value)
         self.db.commit()
         self.db.refresh(workout_set)
@@ -77,6 +80,7 @@ class SessionRepository:
         weight: float,
         set_type: str = "normal",
         position: int | None = None,
+        superset_group: str | None = None,
     ) -> WorkoutSet:
         if position is None:
             position = self._next_position(session.id)
@@ -97,6 +101,7 @@ class SessionRepository:
             weight=weight,
             set_type=set_type,
             position=position,
+            superset_group=superset_group,
         )
         self.db.add(workout_set)
         self.db.commit()

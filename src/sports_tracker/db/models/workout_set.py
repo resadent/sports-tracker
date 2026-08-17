@@ -30,6 +30,7 @@ class WorkoutSet(Base):
     weight: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     set_type: Mapped[str] = mapped_column(String(16), nullable=False, default="normal")
+    superset_group: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

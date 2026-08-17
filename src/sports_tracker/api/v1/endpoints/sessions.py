@@ -56,6 +56,7 @@ def create_session(
                 weight=set_payload.weight,
                 set_type=set_payload.set_type.value,
                 position=position,
+                superset_group=set_payload.superset_group,
             )
         )
 
@@ -112,6 +113,7 @@ def add_workout_set(
         weight=payload.weight,
         set_type=payload.set_type.value,
         position=payload.position,
+        superset_group=payload.superset_group,
     )
     return WorkoutSetRead.model_validate(workout_set)
 
