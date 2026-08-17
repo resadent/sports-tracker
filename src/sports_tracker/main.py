@@ -1,11 +1,17 @@
 # app/main.py
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from sports_tracker.api.v1.router import api_v1_router
 from sports_tracker.settings import settings
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 def create_app() -> FastAPI:
@@ -26,10 +32,11 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(api_v1_router, prefix="/api/v1")
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
     @app.get("/", include_in_schema=False)
-    def root() -> dict[str, str]:
-        return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
+    def root() -> FileResponse:
+        return FileResponse(STATIC_DIR / "index.html")
 
     return app
 
