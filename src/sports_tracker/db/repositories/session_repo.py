@@ -1,7 +1,7 @@
 # app/db/repositories/session_repo.py
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from sports_tracker.db.models.session import Session as WorkoutSession
@@ -60,15 +60,69 @@ class SessionRepository:
             .where(WorkoutSet.id == set_id, WorkoutSet.session_id == session_id)
         )
 
-    def update_set(self, workout_set: WorkoutSet, reps: int | None, weight: float | None) -> WorkoutSet:
-        if reps is not None:
-            workout_set.reps = reps
-        if weight is not None:
-            workout_set.weight = weight
+    def update_set(self, workout_set: WorkoutSet, **changes) -> WorkoutSet:
+        for field, value in changes.items():
+            if value is not None:
+                setattr(workout_set, field, value)
         self.db.commit()
         self.db.refresh(workout_set)
         return workout_set
 
+    def add_set(
+        self,
+        session: WorkoutSession,
+        *,
+        exercise_id: int,
+        reps: int,
+        weight: float,
+        set_type: str = "normal",
+        position: int | None = None,
+    ) -> WorkoutSet:
+        if position is None:
+            position = self._next_position(session.id)
+        else:
+            self.db.execute(
+                update(WorkoutSet)
+                .where(
+                    WorkoutSet.session_id == session.id,
+                    WorkoutSet.position >= position,
+                )
+                .values(position=WorkoutSet.position + 1)
+            )
+
+        workout_set = WorkoutSet(
+            session_id=session.id,
+            exercise_id=exercise_id,
+            reps=reps,
+            weight=weight,
+            set_type=set_type,
+            position=position,
+        )
+        self.db.add(workout_set)
+        self.db.commit()
+        self.db.refresh(workout_set)
+        return workout_set
+
+    def reorder_sets(self, session_id: int, set_ids: list[int]) -> None:
+        for index, set_id in enumerate(set_ids):
+            self.db.execute(
+                update(WorkoutSet)
+                .where(
+                    WorkoutSet.id == set_id,
+                    WorkoutSet.session_id == session_id,
+                )
+                .values(position=index)
+            )
+        self.db.commit()
+
     def delete_set(self, workout_set: WorkoutSet) -> None:
         self.db.delete(workout_set)
         self.db.commit()
+
+    def _next_position(self, session_id: int) -> int:
+        max_position = self.db.scalar(
+            select(func.max(WorkoutSet.position)).where(
+                WorkoutSet.session_id == session_id
+            )
+        )
+        return (max_position + 1) if max_position is not None else 0

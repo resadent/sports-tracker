@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, func
+from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sports_tracker.db.base import Base
@@ -15,6 +15,12 @@ if TYPE_CHECKING:
 
 class WorkoutSet(Base):
     __tablename__ = "workout_sets"
+    __table_args__ = (
+        CheckConstraint(
+            "set_type IN ('normal', 'warmup', 'drop', 'failure')",
+            name="ck_workout_sets_set_type",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
@@ -22,6 +28,8 @@ class WorkoutSet(Base):
 
     reps: Mapped[int] = mapped_column(Integer, nullable=False)
     weight: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    set_type: Mapped[str] = mapped_column(String(16), nullable=False, default="normal")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

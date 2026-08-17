@@ -13,6 +13,8 @@ from sports_tracker.db.session import get_db
 from sports_tracker.schemas.sessions import (
     SessionCreate,
     SessionRead,
+    WorkoutSetCreate,
+    WorkoutSetOrderUpdate,
     WorkoutSetRead,
     WorkoutSetUpdate,
 )
@@ -40,17 +42,20 @@ def create_session(
 ) -> SessionRead:
     exercise_repo = ExerciseRepository(db)
     workout_sets = []
-    for set_payload in payload.workout_sets:
+    for index, set_payload in enumerate(payload.workout_sets):
         if exercise_repo.get_by_id(set_payload.exercise_id) is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Exercise {set_payload.exercise_id} not found",
             )
+        position = set_payload.position if set_payload.position is not None else index
         workout_sets.append(
             WorkoutSet(
                 exercise_id=set_payload.exercise_id,
                 reps=set_payload.reps,
                 weight=set_payload.weight,
+                set_type=set_payload.set_type.value,
+                position=position,
             )
         )
 
@@ -83,6 +88,55 @@ def delete_session(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.post(
+    "/sessions/{session_id}/workout-sets",
+    response_model=WorkoutSetRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_workout_set(
+    session_id: int,
+    payload: WorkoutSetCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> WorkoutSetRead:
+    session = _get_owned_session(session_id, current_user.id, db)
+    if ExerciseRepository(db).get_by_id(payload.exercise_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exercise {payload.exercise_id} not found",
+        )
+    workout_set = SessionRepository(db).add_set(
+        session,
+        exercise_id=payload.exercise_id,
+        reps=payload.reps,
+        weight=payload.weight,
+        set_type=payload.set_type.value,
+        position=payload.position,
+    )
+    return WorkoutSetRead.model_validate(workout_set)
+
+
+@router.put(
+    "/sessions/{session_id}/workout-sets/order",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def reorder_workout_sets(
+    session_id: int,
+    payload: WorkoutSetOrderUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    session = _get_owned_session(session_id, current_user.id, db)
+    existing_ids = {ws.id for ws in session.workout_sets}
+    if len(payload.set_ids) != len(existing_ids) or set(payload.set_ids) != existing_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="set_ids must be a permutation of the session's workout sets",
+        )
+    SessionRepository(db).reorder_sets(session_id, payload.set_ids)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.patch(
     "/sessions/{session_id}/workout-sets/{set_id}",
     response_model=WorkoutSetRead,
@@ -102,7 +156,8 @@ def update_workout_set(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workout set not found",
         )
-    updated = repo.update_set(workout_set, reps=payload.reps, weight=payload.weight)
+    changes = payload.model_dump(exclude_unset=True, mode="json")
+    updated = repo.update_set(workout_set, **changes)
     return WorkoutSetRead.model_validate(updated)
 
 
