@@ -126,19 +126,59 @@ def test_series_moving_average_and_override(client):
     assert points[-1]["weight_ma"] == 75.5
 
 
+def test_series_recomposition(client):
+    _create_user(client, "recomp@example.com")
+    headers = _auth_headers(client, "recomp@example.com")
+
+    weights = [70.0, 71.0, 72.0, 73.0, 74.0, 75.0, 76.0, 78.0]
+    waists = [90.0, 89.0, 88.0, 87.0, 86.0, 85.0, 84.0, 82.0]
+    for i, (w, a) in enumerate(zip(weights, waists), start=1):
+        _post_measurement(client, headers, f"2026-08-{i:02d}", weight=w, waist=a)
+
+    # Window 7 -> compares day 8 against day 1 for each metric.
+    points = client.get("/api/v1/measurements/series", headers=headers).json()
+    assert points[6]["recomposition"] is None  # not enough history yet
+    assert points[-1]["recomposition"] == round(
+        100 * (78.0 / 70.0 - 82.0 / 90.0), 2
+    )
+
+    # Per-request override beats the saved window.
+    points = client.get(
+        "/api/v1/measurements/series?recomp_window=2", headers=headers
+    ).json()
+    assert points[-1]["recomposition"] == round(
+        100 * (78.0 / 75.0 - 82.0 / 85.0), 2
+    )
+
+
+def test_recomposition_requires_both_metrics(client):
+    _create_user(client, "recomp1@example.com")
+    headers = _auth_headers(client, "recomp1@example.com")
+
+    for i in range(1, 9):
+        _post_measurement(client, headers, f"2026-08-{i:02d}", weight=70.0 + i)
+
+    points = client.get("/api/v1/measurements/series", headers=headers).json()
+    assert all(p["recomposition"] is None for p in points)
+
+
 def test_settings_defaults_and_patch(client):
     _create_user(client, "settings@example.com")
     headers = _auth_headers(client, "settings@example.com")
 
     r = client.get("/api/v1/settings", headers=headers)
     assert r.status_code == 200
-    assert r.json() == {"weight_ma_window": 7, "waist_ma_window": 7}
+    assert r.json() == {"weight_ma_window": 7, "waist_ma_window": 7, "recomp_window": 7}
 
     r = client.patch(
         "/api/v1/settings", json={"weight_ma_window": 14}, headers=headers
     )
     assert r.status_code == 200
-    assert r.json() == {"weight_ma_window": 14, "waist_ma_window": 7}
+    assert r.json() == {
+        "weight_ma_window": 14,
+        "waist_ma_window": 7,
+        "recomp_window": 7,
+    }
 
     # A different user still gets defaults.
     _create_user(client, "settings2@example.com")
@@ -146,6 +186,7 @@ def test_settings_defaults_and_patch(client):
     assert client.get("/api/v1/settings", headers=headers2).json() == {
         "weight_ma_window": 7,
         "waist_ma_window": 7,
+        "recomp_window": 7,
     }
 
 

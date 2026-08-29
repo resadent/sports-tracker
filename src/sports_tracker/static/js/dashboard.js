@@ -5,8 +5,11 @@ async function renderDashboard(app) {
     <section class="panel">
       <h1>Dashboard</h1>
       <div class="charts">
-        <div class="chart-box"><h2>Weight (kg)</h2><div class="chart-canvas"><canvas id="weight-chart"></canvas></div></div>
-        <div class="chart-box"><h2>Waist (cm)</h2><div class="chart-canvas"><canvas id="waist-chart"></canvas></div></div>
+        <div class="chart-box">
+          <h2>Metrics</h2>
+          <p class="chart-hint">Click a legend entry to show or hide a series.</p>
+          <div class="chart-canvas"><canvas id="main-chart"></canvas></div>
+        </div>
       </div>
     </section>
 
@@ -21,9 +24,10 @@ async function renderDashboard(app) {
       </form>
 
       <form class="panel" id="settings-form">
-        <h2>Moving-average window</h2>
-        <label>Weight (days)<input type="number" id="set-weight" min="1" max="365"></label>
-        <label>Waist (days)<input type="number" id="set-waist" min="1" max="365"></label>
+        <h2>Metric windows</h2>
+        <label>Weight MA (days)<input type="number" id="set-weight" min="1" max="365"></label>
+        <label>Waist MA (days)<input type="number" id="set-waist" min="1" max="365"></label>
+        <label>Recomposition (days)<input type="number" id="set-recomp" min="1" max="365"></label>
         <button type="submit">Save</button>
         <p class="msg" id="settings-msg"></p>
       </form>
@@ -53,15 +57,17 @@ async function refreshDashboard(app) {
 
   app.querySelector("#set-weight").value = settings.weight_ma_window;
   app.querySelector("#set-waist").value = settings.waist_ma_window;
+  app.querySelector("#set-recomp").value = settings.recomp_window;
 
-  renderChart("weight-chart", series, "Weight", "weight_kg", "weight_ma", "kg", settings.weight_ma_window);
-  renderChart("waist-chart", series, "Waist", "waist_cm", "waist_ma", "cm", settings.waist_ma_window);
+  renderMainChart(series, settings);
 
   renderHistory(app, measurements);
 }
 
-function renderChart(canvasId, series, label, rawKey, maKey, unit, windowDays) {
-  const canvas = document.getElementById(canvasId);
+// One chart holds every series (weight, waist, recomposition — raw and moving
+// average). Clicking a legend entry toggles a series on/off (Chart.js default).
+function renderMainChart(series, settings) {
+  const canvas = document.getElementById("main-chart");
   // Chart.getChart(canvas) returns the chart instance bound to this canvas.
   // (Don't track charts on `window[canvasId]`: the id collides with the
   // browser's named access to the <canvas> element, which has no .destroy.)
@@ -69,8 +75,6 @@ function renderChart(canvasId, series, label, rawKey, maKey, unit, windowDays) {
   if (existing) existing.destroy();
 
   const labels = series.map((p) => p.date);
-  const raw = series.map((p) => p[rawKey]);
-  const ma = series.map((p) => p[maKey]);
 
   new Chart(canvas, {
     type: "line",
@@ -78,22 +82,53 @@ function renderChart(canvasId, series, label, rawKey, maKey, unit, windowDays) {
       labels,
       datasets: [
         {
-          label,
-          data: raw,
+          label: "Weight (kg)",
+          data: series.map((p) => p.weight_kg),
           borderColor: "#2563eb",
           backgroundColor: "#2563eb",
           spanGaps: true,
           tension: 0.2,
+          yAxisID: "y",
         },
         {
-          label: `${windowDays}-day avg`,
-          data: ma,
+          label: `Weight ${settings.weight_ma_window}d avg`,
+          data: series.map((p) => p.weight_ma),
+          borderColor: "#2563eb",
+          backgroundColor: "#2563eb",
+          borderDash: [5, 5],
+          spanGaps: true,
+          tension: 0.2,
+          pointRadius: 0,
+          yAxisID: "y",
+        },
+        {
+          label: "Waist (cm)",
+          data: series.map((p) => p.waist_cm),
+          borderColor: "#f59e0b",
+          backgroundColor: "#f59e0b",
+          spanGaps: true,
+          tension: 0.2,
+          yAxisID: "y",
+        },
+        {
+          label: `Waist ${settings.waist_ma_window}d avg`,
+          data: series.map((p) => p.waist_ma),
           borderColor: "#f59e0b",
           backgroundColor: "#f59e0b",
           borderDash: [5, 5],
           spanGaps: true,
           tension: 0.2,
           pointRadius: 0,
+          yAxisID: "y",
+        },
+        {
+          label: "Recomposition",
+          data: series.map((p) => p.recomposition),
+          borderColor: "#10b981",
+          backgroundColor: "#10b981",
+          spanGaps: true,
+          tension: 0.2,
+          yAxisID: "y1",
         },
       ],
     },
@@ -102,7 +137,14 @@ function renderChart(canvasId, series, label, rawKey, maKey, unit, windowDays) {
       maintainAspectRatio: false,
       plugins: { legend: { position: "bottom" } },
       scales: {
-        y: { title: { display: true, text: unit } },
+        // Weight and waist are numerically comparable (kg vs cm); recomposition
+        // is a small ratio score so it gets its own right-hand axis.
+        y: { title: { display: true, text: "kg / cm" } },
+        y1: {
+          position: "right",
+          title: { display: true, text: "Recomposition" },
+          grid: { drawOnChartArea: false },
+        },
       },
     },
   });
@@ -216,6 +258,7 @@ async function onSettingsSubmit(e) {
     await api("PATCH", "/api/v1/settings", {
       weight_ma_window: Number(app.querySelector("#set-weight").value),
       waist_ma_window: Number(app.querySelector("#set-waist").value),
+      recomp_window: Number(app.querySelector("#set-recomp").value),
     });
     msg.className = "msg ok";
     msg.textContent = "Saved ✓";

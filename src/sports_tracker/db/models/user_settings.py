@@ -22,6 +22,7 @@ class UserSettings(Base):
     )
     weight_ma_window: Mapped[int] = mapped_column(Integer, nullable=False, server_default="7")
     waist_ma_window: Mapped[int] = mapped_column(Integer, nullable=False, server_default="7")
+    recomp_window: Mapped[int] = mapped_column(Integer, nullable=False, server_default="7")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

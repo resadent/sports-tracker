@@ -17,7 +17,7 @@ class UserSettingsRepository:
         )
         if settings is None:
             settings = UserSettings(
-                user_id=user_id, weight_ma_window=7, waist_ma_window=7
+                user_id=user_id, weight_ma_window=7, waist_ma_window=7, recomp_window=7
             )
             self.db.add(settings)
             self.db.commit()
@@ -29,12 +29,15 @@ class UserSettingsRepository:
         user_id: int,
         weight_ma_window: int | None = None,
         waist_ma_window: int | None = None,
+        recomp_window: int | None = None,
     ) -> UserSettings:
         settings = self.get_or_create(user_id)
         if weight_ma_window is not None:
             settings.weight_ma_window = weight_ma_window
         if waist_ma_window is not None:
             settings.waist_ma_window = waist_ma_window
+        if recomp_window is not None:
+            settings.recomp_window = recomp_window
         self.db.commit()
         self.db.refresh(settings)
         return settings

@@ -41,3 +41,4 @@ class SeriesPointRead(BaseModel):
     weight_ma: float | None
     waist_cm: float | None
     waist_ma: float | None
+    recomposition: float | None

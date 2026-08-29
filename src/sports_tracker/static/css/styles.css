@@ -60,11 +60,12 @@ body {
 h1 { font-size: 1.35rem; margin-top: 0; }
 h2 { font-size: 1.05rem; }
 
-.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.charts { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1rem; }
 /* The canvas must be the only child of the fixed-height parent, else Chart.js
    overflows the box by the heading's height (legend bleeds onto the panel below). */
 .chart-box { position: relative; }
 .chart-canvas { position: relative; height: 260px; }
+.chart-hint { margin: 0 0 0.5rem; font-size: 0.8rem; color: var(--muted); }
 
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 

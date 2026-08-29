@@ -40,6 +40,7 @@ def list_measurements(
 def measurement_series(
     weight_window: int | None = Query(default=None, ge=1, le=365),
     waist_window: int | None = Query(default=None, ge=1, le=365),
+    recomp_window: int | None = Query(default=None, ge=1, le=365),
     start_date: date | None = Query(default=None),
     end_date: date | None = Query(default=None),
     db: Session = Depends(get_db),
@@ -48,6 +49,7 @@ def measurement_series(
     settings = UserSettingsRepository(db).get_or_create(current_user.id)
     w_window = weight_window if weight_window is not None else settings.weight_ma_window
     a_window = waist_window if waist_window is not None else settings.waist_ma_window
+    r_window = recomp_window if recomp_window is not None else settings.recomp_window
 
     rows = MeasurementRepository(db).list_for_user(
         current_user.id, start=start_date, end=end_date
@@ -55,12 +57,29 @@ def measurement_series(
 
     wq: deque[float] = deque(maxlen=w_window)
     aq: deque[float] = deque(maxlen=a_window)
+    w_hist: list[float] = []
+    a_hist: list[float] = []
     points: list[SeriesPointRead] = []
     for m in rows:
         if m.weight_kg is not None:
             wq.append(m.weight_kg)
+            w_hist.append(m.weight_kg)
         if m.waist_cm is not None:
             aq.append(m.waist_cm)
+            a_hist.append(m.waist_cm)
+
+        recomposition = None
+        if m.weight_kg is not None and m.waist_cm is not None:
+            wi = len(w_hist) - 1
+            ai = len(a_hist) - 1
+            # Compare to the value r_window readings back for each metric.
+            if wi >= r_window and ai >= r_window:
+                recomposition = round(
+                    100
+                    * (m.weight_kg / w_hist[wi - r_window] - m.waist_cm / a_hist[ai - r_window]),
+                    2,
+                )
+
         points.append(
             SeriesPointRead(
                 date=m.date,
@@ -68,6 +87,7 @@ def measurement_series(
                 weight_ma=round(mean(wq), 2) if wq else None,
                 waist_cm=m.waist_cm,
                 waist_ma=round(mean(aq), 2) if aq else None,
+                recomposition=recomposition,
             )
         )
     return points
