@@ -133,6 +133,7 @@ th { color: var(--muted); font-weight: 600; }
 .set-row.grouped { border-left-color: #7c3aed; }
 .set-row input, .set-row select { margin-top: 0; }
 .set-actions { display: flex; gap: 0.3rem; }
+.row-actions { display: flex; gap: 0.3rem; }
 
 .exercise-label { font-size: 0.9rem; }
 

@@ -62,13 +62,17 @@ async function refreshDashboard(app) {
 
 function renderChart(canvasId, series, label, rawKey, maKey, unit, windowDays) {
   const canvas = document.getElementById(canvasId);
-  if (window[canvasId]) window[canvasId].destroy();
+  // Chart.getChart(canvas) returns the chart instance bound to this canvas.
+  // (Don't track charts on `window[canvasId]`: the id collides with the
+  // browser's named access to the <canvas> element, which has no .destroy.)
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
 
   const labels = series.map((p) => p.date);
   const raw = series.map((p) => p[rawKey]);
   const ma = series.map((p) => p[maKey]);
 
-  window[canvasId] = new Chart(canvas, {
+  new Chart(canvas, {
     type: "line",
     data: {
       labels,
@@ -120,9 +124,52 @@ function renderHistory(app, measurements) {
       <td>${m.date}</td>
       <td>${m.weight_kg == null ? "—" : m.weight_kg}</td>
       <td>${m.waist_cm == null ? "—" : m.waist_cm}</td>
-      <td><button class="danger small" data-id="${m.id}">Delete</button></td>`;
-    tr.querySelector("button").addEventListener("click", () => deleteMeasurement(m.id));
+      <td>
+        <div class="row-actions">
+          <button class="small secondary btn-edit">Edit</button>
+          <button class="danger small btn-delete">Delete</button>
+        </div>
+      </td>`;
+    tr.querySelector(".btn-edit").addEventListener("click", () => enterEditMode(tr, m));
+    tr.querySelector(".btn-delete").addEventListener("click", () => deleteMeasurement(m.id));
     body.appendChild(tr);
+  }
+}
+
+function enterEditMode(tr, m) {
+  const [, weightCell, waistCell, actionsCell] = tr.children;
+  weightCell.innerHTML = `<input type="number" step="0.1" min="0" value="${m.weight_kg ?? ""}" class="edit-weight" aria-label="Weight">`;
+  waistCell.innerHTML = `<input type="number" step="0.1" min="0" value="${m.waist_cm ?? ""}" class="edit-waist" aria-label="Waist">`;
+  actionsCell.innerHTML = editActions();
+  actionsCell.querySelector(".save-edit").addEventListener("click", () => saveEdit(tr, m));
+  actionsCell.querySelector(".cancel-edit").addEventListener("click", () => refreshDashboard(document.getElementById("app")));
+}
+
+function editActions(error) {
+  return (error ? `<span class="msg error">${error}</span>` : "") +
+    '<button class="small save-edit">Save</button>' +
+    '<button class="small secondary cancel-edit">Cancel</button>';
+}
+
+async function saveEdit(tr, m) {
+  const actionsCell = tr.lastElementChild;
+  const weight = tr.querySelector(".edit-weight").value;
+  const waist = tr.querySelector(".edit-waist").value;
+  const weightKg = weight === "" ? null : Number(weight);
+  const waistCm = waist === "" ? null : Number(waist);
+
+  if (weightKg == null && waistCm == null) {
+    actionsCell.innerHTML = editActions("Enter a weight or waist.");
+    actionsCell.querySelector(".cancel-edit").addEventListener("click", () => refreshDashboard(document.getElementById("app")));
+    return;
+  }
+
+  try {
+    await api("PATCH", `/api/v1/measurements/${m.id}`, { weight_kg: weightKg, waist_cm: waistCm });
+    await refreshDashboard(document.getElementById("app"));
+  } catch (err) {
+    actionsCell.innerHTML = editActions(err.message);
+    actionsCell.querySelector(".cancel-edit").addEventListener("click", () => refreshDashboard(document.getElementById("app")));
   }
 }
 
