@@ -5,8 +5,8 @@ async function renderDashboard(app) {
     <section class="panel">
       <h1>Dashboard</h1>
       <div class="charts">
-        <div class="chart-box"><h2>Weight (kg)</h2><canvas id="weight-chart"></canvas></div>
-        <div class="chart-box"><h2>Waist (cm)</h2><canvas id="waist-chart"></canvas></div>
+        <div class="chart-box"><h2>Weight (kg)</h2><div class="chart-canvas"><canvas id="weight-chart"></canvas></div></div>
+        <div class="chart-box"><h2>Waist (cm)</h2><div class="chart-canvas"><canvas id="waist-chart"></canvas></div></div>
       </div>
     </section>
 

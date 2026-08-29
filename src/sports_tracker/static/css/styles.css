@@ -61,7 +61,10 @@ h1 { font-size: 1.35rem; margin-top: 0; }
 h2 { font-size: 1.05rem; }
 
 .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-.chart-box { position: relative; height: 280px; }
+/* The canvas must be the only child of the fixed-height parent, else Chart.js
+   overflows the box by the heading's height (legend bleeds onto the panel below). */
+.chart-box { position: relative; }
+.chart-canvas { position: relative; height: 260px; }
 
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
