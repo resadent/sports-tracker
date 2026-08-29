@@ -217,3 +217,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+# Anchored to the repo root so .claude/skills/graft/ is still committed.
+/graft/
+
+# npm — the graft CLI is declared in package.json; the installed tree is not.
+node_modules/
