@@ -1,6 +1,12 @@
 # tests/api/test_users.py
 from __future__ import annotations
 
+import time
+
+import jwt
+
+from sports_tracker.settings import settings
+
 
 def _auth_headers(client, email: str, password: str = "supersecret1") -> dict[str, str]:
     r = client.post(
@@ -78,6 +84,50 @@ def test_login_wrong_password_401(client):
         data={"username": "wrongpw@example.com", "password": "nope"},
     )
     assert r.status_code == 401, r.text
+
+
+def test_login_remember_me_token_expiry(client):
+    client.post(
+        "/api/v1/users", json={"email": "remember@example.com", "password": "supersecret1"}
+    )
+
+    r_remember = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": "remember@example.com",
+            "password": "supersecret1",
+            "remember_me": "true",
+        },
+    )
+    assert r_remember.status_code == 200, r_remember.text
+
+    r_session = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": "remember@example.com",
+            "password": "supersecret1",
+            "remember_me": "false",
+        },
+    )
+    assert r_session.status_code == 200, r_session.text
+
+    def _lifetime_seconds(token: str) -> float:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+            options={"verify_exp": False},
+        )
+        return payload["exp"] - time.time()
+
+    remember_lifetime = _lifetime_seconds(r_remember.json()["access_token"])
+    session_lifetime = _lifetime_seconds(r_session.json()["access_token"])
+
+    # Remembered logins last REMEMBER_ME_EXPIRE_DAYS; plain logins keep the
+    # ACCESS_TOKEN_EXPIRE_MINUTES window. Generous tolerance for token-creation drift.
+    assert abs(remember_lifetime - settings.REMEMBER_ME_EXPIRE_DAYS * 86400) < 120
+    assert abs(session_lifetime - settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60) < 120
+    assert remember_lifetime > session_lifetime
 
 
 def test_get_user_ok(client):

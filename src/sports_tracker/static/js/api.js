@@ -3,15 +3,24 @@
 const TOKEN_KEY = "sports_tracker_token";
 
 function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
 }
 
-function setToken(token) {
-  localStorage.setItem(TOKEN_KEY, token);
+// Remembered logins persist in localStorage (survive browser restarts); plain
+// logins live in sessionStorage (cleared when the tab/browser closes).
+function setToken(token, remember = false) {
+  if (remember) {
+    localStorage.setItem(TOKEN_KEY, token);
+    sessionStorage.removeItem(TOKEN_KEY);
+  } else {
+    sessionStorage.setItem(TOKEN_KEY, token);
+    localStorage.removeItem(TOKEN_KEY);
+  }
 }
 
 function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
 }
 
 async function api(method, path, body) {

@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-only-secret-change-me-in-production-via-env-file"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    # How long a "remember me" login lasts, in days.
+    REMEMBER_ME_EXPIRE_DAYS: int = 30
 
     @field_validator("CELERY_BROKER_URL", "CELERY_RESULT_BACKEND")
     @classmethod

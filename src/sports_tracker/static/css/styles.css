@@ -71,6 +71,9 @@ h2 { font-size: 1.05rem; }
 
 label { display: block; margin-bottom: 0.6rem; font-size: 0.85rem; color: var(--muted); }
 
+.checkbox-row { display: flex; align-items: center; gap: 0.4rem; }
+.checkbox-row input { width: auto; margin-top: 0; }
+
 input, select {
   display: block;
   width: 100%;
