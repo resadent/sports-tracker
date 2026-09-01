@@ -224,3 +224,7 @@ __marimo__/
 
 # npm — the graft CLI is declared in package.json; the installed tree is not.
 node_modules/
+
+
+.mcp.json
+.claude/helpers/graft*
