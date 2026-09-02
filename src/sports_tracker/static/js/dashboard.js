@@ -1,18 +1,8 @@
-// dashboard.js — weight/waist charts with moving averages, the daily log form,
-// the moving-average settings, and a history table.
+// dashboard.js — weight/waist charts (a selectable month or the last 30 days
+// at a time) with moving averages, the daily log form, the moving-average
+// settings, and a history table.
 async function renderDashboard(app) {
   app.innerHTML = `
-    <section class="panel">
-      <h1>Dashboard</h1>
-      <div class="charts">
-        <div class="chart-box">
-          <h2>Metrics</h2>
-          <p class="chart-hint">Click a legend entry to show or hide a series.</p>
-          <div class="chart-canvas"><canvas id="main-chart"></canvas></div>
-        </div>
-      </div>
-    </section>
-
     <div class="grid">
       <form class="panel" id="log-form">
         <h2>Log today</h2>
@@ -34,6 +24,17 @@ async function renderDashboard(app) {
     </div>
 
     <section class="panel">
+      <h2>Metrics</h2>
+      <div class="month-nav">
+        <button type="button" id="month-prev" class="small secondary" aria-label="Previous window">◀</button>
+        <select id="chart-window" aria-label="Chart window"></select>
+        <button type="button" id="month-next" class="small secondary" aria-label="Next window">▶</button>
+      </div>
+      <p class="chart-hint">Click a legend entry to show or hide a series.</p>
+      <div class="chart-canvas"><canvas id="main-chart"></canvas></div>
+    </section>
+
+    <section class="panel">
       <h2>History</h2>
       <table>
         <thead><tr><th>Date</th><th>Weight (kg)</th><th>Waist (cm)</th><th></th></tr></thead>
@@ -44,9 +45,17 @@ async function renderDashboard(app) {
   app.querySelector("#log-date").value = localDate();
   app.querySelector("#log-form").addEventListener("submit", (e) => onLogSubmit(e));
   app.querySelector("#settings-form").addEventListener("submit", (e) => onSettingsSubmit(e));
+  app.querySelector("#month-prev").addEventListener("click", () => shiftMonth(-1));
+  app.querySelector("#month-next").addEventListener("click", () => shiftMonth(1));
+  app.querySelector("#chart-window").addEventListener("change", () => renderMainChart());
 
   await refreshDashboard(app);
 }
+
+// Cached between refreshes so the month selector can redraw the chart
+// without refetching.
+let dashboardSeries = [];
+let dashboardSettings = null;
 
 async function refreshDashboard(app) {
   const [series, settings, measurements] = await Promise.all([
@@ -55,18 +64,86 @@ async function refreshDashboard(app) {
     api("GET", "/api/v1/measurements"),
   ]);
 
+  dashboardSeries = series;
+  dashboardSettings = settings;
+
   app.querySelector("#set-weight").value = settings.weight_ma_window;
   app.querySelector("#set-waist").value = settings.waist_ma_window;
   app.querySelector("#set-recomp").value = settings.recomp_window;
 
-  renderMainChart(series, settings);
+  refreshWindowSelect();
+  renderMainChart();
 
   renderHistory(app, measurements);
 }
 
+// Rebuild the window dropdown ("Last 30 days" plus one entry per month with
+// data, most recent first, the current month always included) while keeping
+// the selection when it still exists. Defaults to the last 30 days.
+function refreshWindowSelect() {
+  const select = document.getElementById("chart-window");
+  const previous = select.value;
+
+  const months = [...new Set(dashboardSeries.map((p) => p.date.slice(0, 7)))]
+    .sort()
+    .reverse();
+  const currentYm = localDate().slice(0, 7);
+  if (!months.includes(currentYm)) months.unshift(currentYm);
+
+  const values = ["last30", ...months];
+  select.innerHTML = values
+    .map((v) => `<option value="${v}">${windowLabel(v)}</option>`)
+    .join("");
+  select.value = values.includes(previous) ? previous : "last30";
+
+  syncMonthNav();
+}
+
+function windowLabel(value) {
+  if (value === "last30") return "Last 30 days";
+  const [y, m] = value.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function shiftMonth(delta) {
+  const select = document.getElementById("chart-window");
+  const target = select.selectedIndex + delta;
+  if (target < 0 || target >= select.options.length) return;
+  select.selectedIndex = target;
+  syncMonthNav();
+  renderMainChart();
+}
+
+function syncMonthNav() {
+  const select = document.getElementById("chart-window");
+  document.getElementById("month-next").disabled = select.selectedIndex === 0;
+  document.getElementById("month-prev").disabled =
+    select.selectedIndex === select.options.length - 1;
+}
+
+// Window filter: "last30" is a rolling 30-day window ending today; anything
+// else is a YYYY-MM calendar month. Dates are YYYY-MM-DD strings, so they
+// compare chronologically as strings.
+function filterByWindow(series, mode) {
+  if (mode !== "last30") {
+    return series.filter((p) => p.date.slice(0, 7) === mode);
+  }
+  const start = new Date();
+  start.setDate(start.getDate() - 29);
+  const startStr = localDate(start);
+  const endStr = localDate();
+  return series.filter((p) => p.date >= startStr && p.date <= endStr);
+}
+
 // One chart holds every series (weight, waist, recomposition — raw and moving
-// average). Clicking a legend entry toggles a series on/off (Chart.js default).
-function renderMainChart(series, settings) {
+// average) for the window picked in #chart-window. The moving averages are
+// computed server-side over the full history, so slicing the series to the
+// window here keeps their values correct. Clicking a legend entry toggles a
+// series on/off (Chart.js default).
+function renderMainChart() {
   const canvas = document.getElementById("main-chart");
   // Chart.getChart(canvas) returns the chart instance bound to this canvas.
   // (Don't track charts on `window[canvasId]`: the id collides with the
@@ -74,6 +151,11 @@ function renderMainChart(series, settings) {
   const existing = Chart.getChart(canvas);
   if (existing) existing.destroy();
 
+  const series = filterByWindow(
+    dashboardSeries,
+    document.getElementById("chart-window").value,
+  );
+  const settings = dashboardSettings;
   const labels = series.map((p) => p.date);
 
   new Chart(canvas, {
