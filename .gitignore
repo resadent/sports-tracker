@@ -226,5 +226,7 @@ __marimo__/
 node_modules/
 
 
+# graft / Claude Code config — machine-specific, kept out of the repo
 .mcp.json
+.claude/settings.json
 .claude/helpers/graft*
