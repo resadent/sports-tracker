@@ -81,7 +81,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/home/chuwi/sports-tracker
-ExecStart=/home/chuwi/sports-tracker/.venv/bin/uvicorn sports_tracker.main:app --host 0.0.0.0 --port 8000
+ExecStart=/home/chuwi/sports-tracker/.venv/bin/uvicorn sports_tracker.main:app --host 0.0.0.0 --port 8000 --ssl-certfile /home/chuwi/.config/sports-tracker/certs/cert.pem --ssl-keyfile /home/chuwi/.config/sports-tracker/certs/key.pem
 Restart=always
 RestartSec=5s
 Environment=PYTHONPATH=/home/chuwi/sports-tracker/src
@@ -124,8 +124,10 @@ systemctl --user enable --now sports-tracker.service
 Verify the service is running and properly communicating with PostgreSQL and Redis:
 
 ```bash
-curl -s http://127.0.0.1:8000/api/v1/health
+curl -sk https://127.0.0.1:8000/api/v1/health
 ```
+
+(`-k` skips certificate verification, which a self-signed certificate always fails.)
 
 Expected response:
 ```json
@@ -134,7 +136,39 @@ Expected response:
 
 ---
 
-## 7. (Optional) Celery Worker Daemon
+## 7. TLS (Self-Signed Certificate)
+
+The daemon serves **HTTPS only** using a self-signed certificate stored in
+`~/.config/sports-tracker/certs/` (kept outside the repo so it can never be
+committed).
+
+To (re)generate the certificate — e.g. after your public IP or DDNS domain
+changes:
+
+```bash
+scripts/generate-tls-cert.sh                     # IPs only
+scripts/generate-tls-cert.sh myname.duckdns.org  # include DDNS domain
+```
+
+The script auto-detects the LAN IP and public IP and puts them (plus
+`localhost`, and the domain when given) into the certificate's
+`subjectAltName`. Then restart the daemon:
+
+```bash
+systemctl --user restart sports-tracker.service
+```
+
+Because the certificate is self-signed, browsers will show a one-time
+warning (`NET::ERR_CERT_AUTHORITY_INVALID`) — use *Advanced → Proceed* to
+continue, or install `cert.pem` as a trusted CA on your devices to remove
+the warning. Tools like `curl` need `-k` (or `--cacert ~/.config/sports-tracker/certs/cert.pem`).
+
+Plain `http://` no longer works on port 8000 once TLS is enabled — use
+`https://` everywhere, including on the LAN.
+
+---
+
+## 8. (Optional) Celery Worker Daemon
 
 If background task processing with Celery is needed, create `~/.config/systemd/user/sports-tracker-celery.service`:
 
