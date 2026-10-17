@@ -36,8 +36,6 @@ def update_settings(
         )
     settings = UserSettingsRepository(db).update(
         current_user.id,
-        weight_ma_window=updates.get("weight_ma_window"),
-        waist_ma_window=updates.get("waist_ma_window"),
-        recomp_window=updates.get("recomp_window"),
+        **updates,
     )
     return UserSettingsRead.model_validate(settings)

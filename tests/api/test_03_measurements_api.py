@@ -126,29 +126,15 @@ def test_series_moving_average_and_override(client):
     assert points[-1]["weight_ma"] == 75.5
 
 
-def test_series_recomposition(client):
+def test_legacy_recomposition_score_is_retired(client):
     _create_user(client, "recomp@example.com")
     headers = _auth_headers(client, "recomp@example.com")
-
-    weights = [70.0, 71.0, 72.0, 73.0, 74.0, 75.0, 76.0, 78.0]
-    waists = [90.0, 89.0, 88.0, 87.0, 86.0, 85.0, 84.0, 82.0]
-    for i, (w, a) in enumerate(zip(weights, waists), start=1):
-        _post_measurement(client, headers, f"2026-08-{i:02d}", weight=w, waist=a)
-
-    # Window 7 -> compares day 8 against day 1 for each metric.
-    points = client.get("/api/v1/measurements/series", headers=headers).json()
-    assert points[6]["recomposition"] is None  # not enough history yet
-    assert points[-1]["recomposition"] == round(
-        100 * (78.0 / 70.0 - 82.0 / 90.0), 2
-    )
-
-    # Per-request override beats the saved window.
-    points = client.get(
-        "/api/v1/measurements/series?recomp_window=2", headers=headers
-    ).json()
-    assert points[-1]["recomposition"] == round(
-        100 * (78.0 / 75.0 - 82.0 / 85.0), 2
-    )
+    _post_measurement(client, headers, "2026-08-01", weight=70, waist=90)
+    _post_measurement(client, headers, "2026-08-08", weight=72, waist=88)
+    points = client.get("/api/v1/measurements/series?recomp_window=2", headers=headers).json()
+    assert all(point["recomposition"] is None for point in points)
+    assert points[-1]["weight_kg"] == 72
+    assert points[-1]["waist_cm"] == 88
 
 
 def test_recomposition_requires_both_metrics(client):
@@ -168,7 +154,8 @@ def test_settings_defaults_and_patch(client):
 
     r = client.get("/api/v1/settings", headers=headers)
     assert r.status_code == 200
-    assert r.json() == {"weight_ma_window": 7, "waist_ma_window": 7, "recomp_window": 7}
+    assert r.json() == {"weight_ma_window": 7, "waist_ma_window": 7, "recomp_window": 7,
+                        "weight_unit": "kg", "waist_unit": "cm", "weight_reminder_days": 0, "waist_reminder_days": 0}
 
     r = client.patch(
         "/api/v1/settings", json={"weight_ma_window": 14}, headers=headers
@@ -178,6 +165,7 @@ def test_settings_defaults_and_patch(client):
         "weight_ma_window": 14,
         "waist_ma_window": 7,
         "recomp_window": 7,
+        "weight_unit": "kg", "waist_unit": "cm", "weight_reminder_days": 0, "waist_reminder_days": 0,
     }
 
     # A different user still gets defaults.
@@ -187,6 +175,7 @@ def test_settings_defaults_and_patch(client):
         "weight_ma_window": 7,
         "waist_ma_window": 7,
         "recomp_window": 7,
+        "weight_unit": "kg", "waist_unit": "cm", "weight_reminder_days": 0, "waist_reminder_days": 0,
     }
 
 

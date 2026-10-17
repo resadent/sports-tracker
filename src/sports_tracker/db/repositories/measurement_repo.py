@@ -1,7 +1,7 @@
 # app/db/repositories/measurement_repo.py
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -23,7 +23,8 @@ class MeasurementRepository:
     def get(self, measurement_id: int, user_id: int) -> Measurement | None:
         return self.db.scalar(
             select(Measurement).where(
-                Measurement.id == measurement_id, Measurement.user_id == user_id
+                Measurement.id == measurement_id, Measurement.user_id == user_id,
+                Measurement.deleted_at.is_(None)
             )
         )
 
@@ -33,6 +34,7 @@ class MeasurementRepository:
         date_: date,
         weight_kg: float | None = None,
         waist_cm: float | None = None,
+        **context,
     ) -> Measurement:
         measurement = self.get_for_date(user_id, date_)
         if measurement is None:
@@ -48,6 +50,11 @@ class MeasurementRepository:
                 measurement.weight_kg = weight_kg
             if waist_cm is not None:
                 measurement.waist_cm = waist_cm
+        measurement.deleted_at = None
+        for field, value in context.items():
+            setattr(measurement, field, value)
+        if waist_cm is not None and "waist_readings" not in context:
+            measurement.waist_readings = None
         self.db.commit()
         self.db.refresh(measurement)
         return measurement
@@ -60,13 +67,13 @@ class MeasurementRepository:
         return measurement
 
     def delete(self, measurement: Measurement) -> None:
-        self.db.delete(measurement)
+        measurement.deleted_at = datetime.now(timezone.utc)
         self.db.commit()
 
     def list_for_user(
         self, user_id: int, start: date | None = None, end: date | None = None
     ) -> list[Measurement]:
-        stmt = select(Measurement).where(Measurement.user_id == user_id)
+        stmt = select(Measurement).where(Measurement.user_id == user_id, Measurement.deleted_at.is_(None))
         if start is not None:
             stmt = stmt.where(Measurement.date >= start)
         if end is not None:

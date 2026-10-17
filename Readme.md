@@ -96,11 +96,22 @@ Postgres needed, and your real database is never touched:
 pytest
 ```
 
-To run against PostgreSQL instead (e.g. in CI):
+To run against PostgreSQL instead, use a dedicated disposable test database. The test fixture drops and recreates its tables; never point it at your live database:
 
 ```bash
-TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/training pytest
+TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:5432/training_test pytest
 ```
+
+Browser regression checks create a temporary SQLite database and a separate server:
+
+```bash
+uv pip install -e '.[dev,browser-test]'
+# Uses local Chrome/Chromium if installed; otherwise install Playwright Chromium:
+python -m playwright install chromium
+python tests/browser/check_measurement_dashboard.py
+```
+
+See [Measurement upgrade](MEASUREMENT_UPGRADE.md) for the dashboard behavior and preservation checks.
 
 ## Database Backup & Restore
 
@@ -131,6 +142,16 @@ Quick commands:
 | DELETE | `/sessions/{id}` | Delete session (cascades to sets) | yes |
 | PATCH | `/sessions/{id}/workout-sets/{set_id}` | Update a set (reps/weight) | yes |
 | DELETE | `/sessions/{id}/workout-sets/{set_id}` | Delete a set | yes |
+| GET | `/measurements` | Own active measurement history | yes |
+| POST | `/measurements` | Add or update measurements for a date | yes |
+| GET | `/measurements/series` | Calendar-day averages and reading counts | yes |
+| PATCH | `/measurements/{id}` | Correct date, metrics, notes or repeats | yes |
+| DELETE | `/measurements/{id}` | Reversibly delete an entry | yes |
+| GET | `/measurements/deleted` | Own recoverable deleted entries | yes |
+| POST | `/measurements/{id}/restore` | Restore a deleted entry | yes |
+| GET | `/measurements/export` | CSV in a JSON csv_text field (kg/cm) | yes |
+| POST | `/measurements/import` | Preview/import CSV; keep existing dates by default | yes |
+| GET / PATCH | `/settings` | Averages, units and in-app reminders | yes |
 | GET | `/health` | DB + Redis health | no |
 
 ## License

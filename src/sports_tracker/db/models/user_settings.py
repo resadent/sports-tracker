@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sports_tracker.db.base import Base
@@ -23,6 +23,11 @@ class UserSettings(Base):
     weight_ma_window: Mapped[int] = mapped_column(Integer, nullable=False, server_default="7")
     waist_ma_window: Mapped[int] = mapped_column(Integer, nullable=False, server_default="7")
     recomp_window: Mapped[int] = mapped_column(Integer, nullable=False, server_default="7")
+
+    weight_unit: Mapped[str] = mapped_column(String(2), nullable=False, server_default="kg")
+    waist_unit: Mapped[str] = mapped_column(String(2), nullable=False, server_default="cm")
+    weight_reminder_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    waist_reminder_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

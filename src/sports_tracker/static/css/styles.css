@@ -164,3 +164,15 @@ th { color: var(--muted); font-weight: 600; }
   .grid { grid-template-columns: 1fr; }
   .set-row { grid-template-columns: 1fr 1fr; }
 }
+
+/* Measurement dashboard */
+textarea { display: block; width: 100%; margin-top: 0.25rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; font: inherit; resize: vertical; }
+.measurement-guide { margin: 0.8rem 0; }
+.measurement-guide summary, .panel > summary, #log-form details > summary { cursor: pointer; margin-bottom: 0.6rem; }
+.measurement-stat { padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; margin: 0.75rem 0; }
+.measurement-stat h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+.measurement-value { margin: 0.3rem 0; font-size: 1.5rem; font-weight: 600; }
+.measurement-table { overflow-x: auto; }
+.measurement-table td:nth-child(4) { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 120px; max-width: 250px; }
+button:disabled { opacity: 0.5; cursor: default; }
+[hidden] { display: none !important; }

@@ -30,6 +30,7 @@ class UserSettingsRepository:
         weight_ma_window: int | None = None,
         waist_ma_window: int | None = None,
         recomp_window: int | None = None,
+        **preferences,
     ) -> UserSettings:
         settings = self.get_or_create(user_id)
         if weight_ma_window is not None:
@@ -38,6 +39,9 @@ class UserSettingsRepository:
             settings.waist_ma_window = waist_ma_window
         if recomp_window is not None:
             settings.recomp_window = recomp_window
+        for field, value in preferences.items():
+            if value is not None:
+                setattr(settings, field, value)
         self.db.commit()
         self.db.refresh(settings)
         return settings

@@ -27,6 +27,8 @@ dev = [
   "httpx",
 ]
 
+browser-test = ["playwright"]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
