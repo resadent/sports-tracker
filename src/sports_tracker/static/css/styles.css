@@ -70,6 +70,8 @@ h2 { font-size: 1.05rem; }
 .month-nav select { width: auto; flex: 1; margin-top: 0; }
 
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.measurement-settings { align-self: start; }
+.measurement-settings summary { cursor: pointer; font-weight: 600; }
 
 label { display: block; margin-bottom: 0.6rem; font-size: 0.85rem; color: var(--muted); }
 
@@ -143,6 +145,9 @@ th { color: var(--muted); font-weight: 600; }
 .set-row input, .set-row select { margin-top: 0; }
 .set-actions { display: flex; gap: 0.3rem; }
 .row-actions { display: flex; gap: 0.3rem; }
+.history-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.75rem; }
+.history-pagination span { font-size: 0.8rem; color: var(--muted); }
+.history-pagination button:disabled { opacity: 0.45; cursor: default; }
 
 .exercise-label { font-size: 0.9rem; }
 

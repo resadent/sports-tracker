@@ -13,14 +13,17 @@ async function renderDashboard(app) {
         <p class="msg" id="log-msg"></p>
       </form>
 
-      <form class="panel" id="settings-form">
-        <h2>Metric windows</h2>
-        <label>Weight MA (days)<input type="number" id="set-weight" min="1" max="365"></label>
-        <label>Waist MA (days)<input type="number" id="set-waist" min="1" max="365"></label>
-        <label>Recomposition (days)<input type="number" id="set-recomp" min="1" max="365"></label>
-        <button type="submit">Save</button>
-        <p class="msg" id="settings-msg"></p>
-      </form>
+      <details class="panel measurement-settings">
+        <summary>Measurement settings</summary>
+        <form id="settings-form">
+          <h2>Metric windows</h2>
+          <label>Weight MA (days)<input type="number" id="set-weight" min="1" max="365"></label>
+          <label>Waist MA (days)<input type="number" id="set-waist" min="1" max="365"></label>
+          <label>Recomposition (days)<input type="number" id="set-recomp" min="1" max="365"></label>
+          <button type="submit">Save settings</button>
+          <p class="msg" id="settings-msg"></p>
+        </form>
+      </details>
     </div>
 
     <section class="panel">
@@ -40,6 +43,11 @@ async function renderDashboard(app) {
         <thead><tr><th>Date</th><th>Weight (kg)</th><th>Waist (cm)</th><th></th></tr></thead>
         <tbody id="history-body"></tbody>
       </table>
+      <nav class="history-pagination" aria-label="Measurement history pages">
+        <button type="button" id="history-prev" class="small secondary">Previous</button>
+        <span id="history-page-status" role="status" aria-live="polite"></span>
+        <button type="button" id="history-next" class="small secondary">Next</button>
+      </nav>
     </section>`;
 
   app.querySelector("#log-date").value = localDate();
@@ -232,8 +240,22 @@ function renderMainChart() {
   });
 }
 
-function renderHistory(app, measurements) {
+function renderHistory(app, measurements, requestedPage) {
   const body = app.querySelector("#history-body");
+  const pageSize = 10;
+  const pageCount = Math.max(1, Math.ceil(measurements.length / pageSize));
+  const page = Math.min(pageCount, Math.max(1, requestedPage ?? Number(body.dataset.page || 1)));
+  body.dataset.page = page;
+  const start = (page - 1) * pageSize;
+  const previous = app.querySelector("#history-prev");
+  const next = app.querySelector("#history-next");
+  previous.disabled = page === 1;
+  next.disabled = page === pageCount;
+  previous.onclick = () => renderHistory(app, measurements, page - 1);
+  next.onclick = () => renderHistory(app, measurements, page + 1);
+  app.querySelector("#history-page-status").textContent = measurements.length
+    ? `${start + 1}–${Math.min(start + pageSize, measurements.length)} of ${measurements.length} · Page ${page} of ${pageCount}`
+    : "0 entries";
   if (!measurements.length) {
     body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">No entries yet.</td></tr>';
     return;
@@ -242,7 +264,7 @@ function renderHistory(app, measurements) {
   body.innerHTML = "";
   // Most recent first.
   const rows = [...measurements].sort((a, b) => (a.date < b.date ? 1 : -1));
-  for (const m of rows) {
+  for (const m of rows.slice(start, start + pageSize)) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${m.date}</td>
@@ -322,6 +344,7 @@ async function onLogSubmit(e) {
     await api("POST", "/api/v1/measurements", body);
     msg.className = "msg ok";
     msg.textContent = "Saved ✓";
+    app.querySelector("#history-body").dataset.page = 1;
     await refreshDashboard(app);
   } catch (err) {
     msg.className = "msg error";

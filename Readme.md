@@ -62,6 +62,31 @@ uvicorn sports_tracker.main:app --reload
 
 Interactive docs: http://127.0.0.1:8000/docs
 
+## Deployment (Docker)
+
+The whole stack runs in `docker compose`. The app image is built in two stages: deps
+are pip-installed into a self-contained directory in a `python:3.13-slim` builder, and
+the runtime is **distroless Debian 13** (`gcr.io/distroless/python3-debian13:nonroot` —
+Python 3.13, no shell, no pip, non-root user).
+
+```bash
+sudo docker compose build      # build the sports-tracker image
+sudo docker compose up -d      # db, redis, migrations (one-shot), then the app
+```
+
+- `db` keeps its existing `postgres_data` volume, so data is preserved across rebuilds.
+- The app reads the host `.env` (`env_file`), but `DATABASE_URL` / `REDIS_URL` are
+  overridden to point at the compose network (`db:5432`, `redis:6379`).
+- Logs: `sudo docker compose logs -f app`
+- One-off commands (e.g. a Celery worker, if you add tasks):
+  `sudo docker compose run --rm app -m celery -A sports_tracker.tasks.celery_app worker --loglevel=info`
+- To debug the image there is no shell for: switch the app image to
+  `gcr.io/distroless/python3-debian13:debug-nonroot` in a scratch Dockerfile.
+
+If you previously ran the app as the `sports-tracker.service` systemd user daemon,
+disable it so port 8000 is free: `systemctl --user disable --now sports-tracker.service`
+(see [DAEMON_SETUP.md](DAEMON_SETUP.md) for the legacy setup).
+
 ## Running tests
 
 Tests run against an isolated **in-memory SQLite** database by default — no Docker or
@@ -75,6 +100,19 @@ To run against PostgreSQL instead (e.g. in CI):
 
 ```bash
 TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/training pytest
+```
+
+## Database Backup & Restore
+
+To back up or restore the PostgreSQL database, see the complete guide in [BACKUP_RESTORE.md](BACKUP_RESTORE.md).
+
+Quick commands:
+```bash
+# Create a backup (outputs .sql and .dump to ./backups/)
+./scripts/backup.sh
+
+# Restore from a backup file
+./scripts/restore.sh backups/training_backup_latest.sql
 ```
 
 ## API overview (all under `/api/v1`)

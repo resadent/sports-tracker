@@ -24,5 +24,49 @@ services:
     ports:
       - "6379:6379"
 
+  # One-shot: applies alembic migrations, then exits. The app waits for it.
+  migrate:
+    build: .
+    image: sports-tracker:latest
+    container_name: sports_tracker_migrate
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/training
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    command: ["-c", "from alembic.config import main; main(argv=['upgrade', 'head'])"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build: .
+    image: sports-tracker:latest
+    container_name: sports_tracker_app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/training
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    ports:
+      - "8000:8000"
+    command: ["-m", "uvicorn", "sports_tracker.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # No shell in distroless: healthcheck runs python directly (exec form,
+      # NOT via the image ENTRYPOINT), failing on any non-2xx response.
+      test: ["CMD", "/usr/bin/python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
 volumes:
   postgres_data:

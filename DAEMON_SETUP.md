@@ -1,6 +1,12 @@
 # Running Sports Tracker as a Background Daemon on Boot
 
-This document explains how Sports Tracker is configured to start automatically in the background on every system boot without requiring interactive login.
+> **Superseded:** the app now runs as the `app` service in
+> [`docker-compose.yml`](docker-compose.yml) (distroless image, starts on boot via
+> `restart: unless-stopped`). See the "Deployment (Docker)" section of the
+> [Readme](Readme.md). This guide is kept for reference only — if the systemd daemon
+> is still enabled, disable it with `systemctl --user disable --now sports-tracker.service`.
+
+This document explains how Sports Tracker was configured to start automatically in the background on every system boot without requiring interactive login.
 
 ---
 

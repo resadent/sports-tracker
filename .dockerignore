@@ -1,0 +1,20 @@
+# Keep secrets, local state and tooling out of the build context.
+.git
+.venv
+.env
+.pytest_cache
+.ignore
+.mcp.json
+opencode.json
+__pycache__
+*.pyc
+graft/
+.claude/
+skills/
+scripts/
+backups/
+tests/
+node_modules/
+package.json
+package-lock.json
+*.md

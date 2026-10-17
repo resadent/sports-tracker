@@ -230,3 +230,8 @@ node_modules/
 .mcp.json
 .claude/settings.json
 .claude/helpers/graft*
+
+# Database backups (keep folder with .gitkeep, ignore dump files)
+backups/*
+!backups/.gitkeep
+*.dump
