@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from sports_tracker.db.models.user_settings import UserSettings
 
@@ -20,8 +21,19 @@ class UserSettingsRepository:
                 user_id=user_id, weight_ma_window=7, waist_ma_window=7, recomp_window=7
             )
             self.db.add(settings)
-            self.db.commit()
-            self.db.refresh(settings)
+            try:
+                self.db.commit()
+            except IntegrityError:
+                # The dashboard requests settings and series concurrently. Both
+                # can observe a missing row on a new account; reuse the winner.
+                self.db.rollback()
+                settings = self.db.scalar(
+                    select(UserSettings).where(UserSettings.user_id == user_id)
+                )
+                if settings is None:
+                    raise
+            else:
+                self.db.refresh(settings)
         return settings
 
     def update(
