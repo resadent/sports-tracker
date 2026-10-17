@@ -126,15 +126,29 @@ def test_series_moving_average_and_override(client):
     assert points[-1]["weight_ma"] == 75.5
 
 
-def test_legacy_recomposition_score_is_retired(client):
+def test_series_recomposition(client):
     _create_user(client, "recomp@example.com")
     headers = _auth_headers(client, "recomp@example.com")
-    _post_measurement(client, headers, "2026-08-01", weight=70, waist=90)
-    _post_measurement(client, headers, "2026-08-08", weight=72, waist=88)
-    points = client.get("/api/v1/measurements/series?recomp_window=2", headers=headers).json()
-    assert all(point["recomposition"] is None for point in points)
-    assert points[-1]["weight_kg"] == 72
-    assert points[-1]["waist_cm"] == 88
+
+    weights = [70.0, 71.0, 72.0, 73.0, 74.0, 75.0, 76.0, 78.0]
+    waists = [90.0, 89.0, 88.0, 87.0, 86.0, 85.0, 84.0, 82.0]
+    for i, (w, a) in enumerate(zip(weights, waists), start=1):
+        _post_measurement(client, headers, f"2026-08-{i:02d}", weight=w, waist=a)
+
+    # Window 7 -> compares day 8 against day 1 for each metric.
+    points = client.get("/api/v1/measurements/series", headers=headers).json()
+    assert points[6]["recomposition"] is None  # not enough history yet
+    assert points[-1]["recomposition"] == round(
+        100 * (78.0 / 70.0 - 82.0 / 90.0), 2
+    )
+
+    # Per-request override beats the saved window.
+    points = client.get(
+        "/api/v1/measurements/series?recomp_window=2", headers=headers
+    ).json()
+    assert points[-1]["recomposition"] == round(
+        100 * (78.0 / 75.0 - 82.0 / 85.0), 2
+    )
 
 
 def test_recomposition_requires_both_metrics(client):
@@ -237,3 +251,36 @@ def test_measurement_validation(client):
         ).status_code
         == 422
     )
+
+
+def test_recomposition_preserves_reading_lookback_with_sparse_dates(client):
+    _create_user(client, "sparse-recomp@example.com")
+    headers = _auth_headers(client, "sparse-recomp@example.com")
+    _post_measurement(client, headers, "2026-08-01", weight=70, waist=90)
+    _post_measurement(client, headers, "2026-08-15", weight=72)
+    _post_measurement(client, headers, "2026-09-01", waist=88)
+    _post_measurement(client, headers, "2026-09-15", weight=73, waist=86)
+    assert client.patch("/api/v1/settings", headers=headers, json={"recomp_window": 1}).status_code == 200
+    points = client.get("/api/v1/measurements/series", headers=headers).json()
+    assert points[-1]["recomposition"] == round(100 * (73 / 72 - 86 / 88), 2)
+    assert points[-1]["weight_ma"] == 73  # Calendar-day smoothing is still independent.
+    assert all(point["recomposition"] is None for point in points[1:3])
+    filtered = client.get("/api/v1/measurements/series?start_date=2026-09-15", headers=headers).json()
+    assert filtered == points[-1:]
+    override = client.get("/api/v1/measurements/series?recomp_window=2", headers=headers).json()
+    assert override[-1]["recomposition"] == round(100 * (73 / 70 - 86 / 90), 2)
+
+
+def test_recomposition_legacy_zero_baseline_is_safe(client, db_session):
+    from sports_tracker.db.models.measurement import Measurement
+    _create_user(client, "zero-recomp@example.com")
+    headers = _auth_headers(client, "zero-recomp@example.com")
+    row = _post_measurement(client, headers, "2026-08-01", weight=70, waist=90)
+    legacy = db_session.get(Measurement, row["id"])
+    legacy.weight_kg = 0
+    db_session.commit()
+    _post_measurement(client, headers, "2026-08-02", weight=71, waist=89)
+    response = client.get("/api/v1/measurements/series?recomp_window=1", headers=headers)
+    assert response.status_code == 200
+    assert response.json()[-1]["recomposition"] is None
+    assert db_session.get(Measurement, row["id"]).weight_kg == 0

@@ -42,8 +42,11 @@ The command only reads database rows and writes a private checksum manifest.
 - Summaries show the latest entry as of the window end, its date, a recent average
   with its reading count, and change between the first and last readings in the
   selected period. Joint comparisons use two dates with both metrics recorded.
-- The old recomposition calculation is retired. Its API field remains null for
-  compatibility, and the existing recomp_window setting is retained unchanged.
+- The original recomposition index is restored in its own chart, with its saved
+  recomp_window setting. Its lookback counts previous readings independently for
+  weight and waist, so baseline dates can differ. The index uses the original
+  formula, 100 × (weight / earlier weight − waist / earlier waist). Missing or zero
+  baseline values produce no index. Calendar-day averages remain unchanged.
 - Legacy zero measurements remain visible in history, but are excluded from
   averages and comparisons. New values must be finite and greater than zero.
 - Logging a change greater than 10% from the existing or previous reading asks for

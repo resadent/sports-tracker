@@ -42,6 +42,7 @@ async function renderDashboard(app) {
         <form id="settings-form">
           <label>Weight average (calendar days)<input type="number" id="set-weight" min="1" max="365" required></label>
           <label>Waist average (calendar days)<input type="number" id="set-waist" min="1" max="365" required></label>
+          <label>Recomposition lookback (readings)<input type="number" id="set-recomp" min="1" max="365" required></label>
           <label>Weight unit<select id="set-weight-unit"><option value="kg">kg</option><option value="lb">lb</option></select></label>
           <label>Waist unit<select id="set-waist-unit"><option value="cm">cm</option><option value="in">in</option></select></label>
           <label>Weight reminder interval (days; 0 = off)<input type="number" id="set-weight-reminder" min="0" max="365" required></label>
@@ -65,6 +66,10 @@ async function renderDashboard(app) {
       <div class="chart-canvas"><canvas id="weight-chart" role="img" aria-label="Weight readings and trend"></canvas></div>
       <h2>Waist (<span data-unit="waist">cm</span>)</h2>
       <div class="chart-canvas"><canvas id="waist-chart" role="img" aria-label="Waist readings and trend"></canvas></div>
+      <h2>Recomposition index</h2>
+      <p class="chart-hint">Original formula: 100 × (weight / earlier weight − waist / earlier waist). The lookback counts readings for each metric, so their baseline dates can differ.</p>
+      <p id="recomposition-status" class="chart-hint" role="status"></p>
+      <div class="chart-canvas"><canvas id="recomposition-chart" role="img" aria-label="Recomposition index over time"></canvas></div>
     </section>
     <section class="panel">
       <h2>History</h2>
@@ -124,7 +129,7 @@ async function refreshDashboard(app) {
   ]);
   if (!app.querySelector("#log-form")) return;
   dashboardSeries = series; dashboardSettings = settings; dashboardMeasurements = measurements;
-  for (const [id, field] of [["set-weight", "weight_ma_window"], ["set-waist", "waist_ma_window"], ["set-weight-unit", "weight_unit"], ["set-waist-unit", "waist_unit"], ["set-weight-reminder", "weight_reminder_days"], ["set-waist-reminder", "waist_reminder_days"]]) {
+  for (const [id, field] of [["set-recomp", "recomp_window"], ["set-weight", "weight_ma_window"], ["set-waist", "waist_ma_window"], ["set-weight-unit", "weight_unit"], ["set-waist-unit", "waist_unit"], ["set-weight-reminder", "weight_reminder_days"], ["set-waist-reminder", "waist_reminder_days"]]) {
     app.querySelector(`#${id}`).value = settings[field];
   }
   app.querySelectorAll("[data-unit]").forEach((el) => { el.textContent = measurementUnit(el.dataset.unit); });
@@ -219,7 +224,41 @@ function renderMainChart() {
       },
     });
   }
+  renderRecompositionChart(series, start, end);
   renderMeasurementSummary(series, end);
+}
+function renderRecompositionChart(series, start, end) {
+  const canvas = document.getElementById("recomposition-chart");
+  Chart.getChart(canvas)?.destroy();
+  const byDate = new Map(series.map((point) => [point.date, point.recomposition]));
+  const data = [];
+  for (let date = start; date <= end; date += MEASUREMENT_DAY) {
+    data.push({x: date, y: byDate.get(measurementISO(date)) ?? null});
+  }
+  const lookback = dashboardSettings.recomp_window;
+  const available = data.filter((point) => point.y != null);
+  const status = document.getElementById("recomposition-status");
+  status.textContent = available.length
+    ? `Latest index in this window: ${available.at(-1).y.toFixed(2)} (${measurementISO(available.at(-1).x)}) · lookback: ${lookback} readings.`
+    : `Insufficient data in this window. The index needs both metrics on a date and ${lookback} earlier readings of each metric.`;
+  new Chart(canvas, {
+    type: "line",
+    data: {datasets: [{label: `Recomposition (${lookback}-reading lookback)`, data,
+      borderColor: "#059669", backgroundColor: "#059669", pointRadius: 3,
+      spanGaps: 7 * MEASUREMENT_DAY, tension: 0}]},
+    options: {
+      responsive: true, maintainAspectRatio: false, parsing: false,
+      plugins: {legend: {position: "bottom"}, tooltip: {callbacks: {
+        title: (items) => items.length ? measurementISO(items[0].parsed.x) : "",
+        label: (context) => `Recomposition index: ${context.parsed.y.toFixed(2)}`,
+      }}},
+      scales: {
+        x: {type: "linear", min: start, max: Math.max(end, start + MEASUREMENT_DAY),
+          ticks: {maxTicksLimit: 6, callback: (value) => measurementISO(value).slice(5)}},
+        y: {title: {display: true, text: "Recomposition index"}},
+      },
+    },
+  });
 }
 function renderMeasurementSummary(series, end) {
   const summary = document.getElementById("measurement-summary");
@@ -367,6 +406,7 @@ async function onSettingsSubmit(e) {
   const draft = {weight: app.querySelector("#log-weight").value, waist: app.querySelector("#log-waist").value, repeats: app.querySelector("#log-repeats").value};
   try {
     await api("PATCH", "/api/v1/settings", {
+      recomp_window: Number(app.querySelector("#set-recomp").value),
       weight_ma_window: Number(app.querySelector("#set-weight").value), waist_ma_window: Number(app.querySelector("#set-waist").value),
       weight_unit: app.querySelector("#set-weight-unit").value, waist_unit: app.querySelector("#set-waist-unit").value,
       weight_reminder_days: Number(app.querySelector("#set-weight-reminder").value), waist_reminder_days: Number(app.querySelector("#set-waist-reminder").value),

@@ -68,7 +68,7 @@ class SeriesPointRead(BaseModel):
     waist_ma: float | None
     weight_count: int = 0
     waist_count: int = 0
-    # Kept for older API clients; the unvalidated score is no longer calculated.
+    # Original percentage-change index, using the saved reading lookback.
     recomposition: float | None = None
 
 

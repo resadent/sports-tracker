@@ -84,6 +84,8 @@ def check_dashboard(BASE):
             raise
         assert page.locator('#weight-chart').count() == 1
         assert page.locator('#waist-chart').count() == 1
+        assert page.locator('#recomposition-chart').count() == 1
+        assert 'Insufficient data' in page.locator('#recomposition-status').inner_text()
         assert 'Same dates' in page.locator('#measurement-comparison').inner_text()
         assert page.evaluate('Chart.getChart(document.getElementById("weight-chart")).options.scales.x.type') == 'linear'
         # Existing-date entry is loaded and notes-only editing preserves full precision.
@@ -101,8 +103,11 @@ def check_dashboard(BASE):
         page.locator('#set-weight-unit').select_option('lb')
         page.locator('#set-waist-unit').select_option('in')
         page.locator('#set-weight-reminder').fill('1')
+        page.locator('#set-recomp').fill('1')
         page.locator('#settings-form button[type=submit]').click()
         page.wait_for_function('dashboardSettings.weight_unit === "lb"')
+        assert page.evaluate('Chart.getChart(document.getElementById("recomposition-chart")).data.datasets[0].data.some(p => p.y != null)')
+        assert request.get('/api/v1/settings',headers=headers).json()['recomp_window'] == 1
         assert 'Time to log weight' in page.locator('#reminder-msg').inner_text()
         page.locator('#log-notes').fill('Changed after units')
         page.locator('#log-save').click()

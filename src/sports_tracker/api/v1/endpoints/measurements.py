@@ -58,15 +58,33 @@ def measurement_series(
     settings = UserSettingsRepository(db).get_or_create(current_user.id)
     w_window = weight_window if weight_window is not None else settings.weight_ma_window
     a_window = waist_window if waist_window is not None else settings.waist_ma_window
-    # recomp_window is accepted for compatibility with older clients.
+    r_window = recomp_window if recomp_window is not None else settings.recomp_window
 
     # Warm up from history before filtering the response: a range request must
     # produce the same averages as the corresponding slice of the full history.
     rows = MeasurementRepository(db).list_for_user(current_user.id, end=end_date)
     wq: deque[tuple[date, float]] = deque()
     aq: deque[tuple[date, float]] = deque()
+    w_hist: list[float] = []
+    a_hist: list[float] = []
     points: list[SeriesPointRead] = []
     for m in rows:
+        # Preserve the original index: each metric looks back N readings,
+        # independently of the calendar-day windows used by moving averages.
+        if m.weight_kg is not None:
+            w_hist.append(m.weight_kg)
+        if m.waist_cm is not None:
+            a_hist.append(m.waist_cm)
+        recomposition = None
+        if (m.weight_kg is not None and m.weight_kg > 0
+                and m.waist_cm is not None and m.waist_cm > 0
+                and len(w_hist) > r_window and len(a_hist) > r_window):
+            previous_weight = w_hist[-1 - r_window]
+            previous_waist = a_hist[-1 - r_window]
+            if previous_weight > 0 and previous_waist > 0:
+                recomposition = round(
+                    100 * (m.weight_kg / previous_weight - m.waist_cm / previous_waist), 2
+                )
         for queue, window, value in ((wq, w_window, m.weight_kg), (aq, a_window, m.waist_cm)):
             cutoff = m.date - timedelta(days=window - 1)
             while queue and queue[0][0] < cutoff:
@@ -84,6 +102,7 @@ def measurement_series(
             waist_ma=round(mean(v for _, v in aq), 2) if aq and m.waist_cm is not None and m.waist_cm > 0 else None,
             weight_count=len(wq),
             waist_count=len(aq),
+            recomposition=recomposition,
         ))
     return points
 
